@@ -30,8 +30,8 @@ import org.stefan.snrpc.serializer.SnRpcResponse;
 import org.stefan.snrpc.serializer.SnRpcResponseDecoder;
 
 /**
- * Sn netty rpc connection
- * @author zhaoliangang 2014-11-13
+ * 实现了Connection接口的类
+ * 很重要！
  */
 public class SnNettyRpcConnection extends SimpleChannelHandler implements
 		SnRpcConnection {
@@ -48,46 +48,74 @@ public class SnNettyRpcConnection extends SimpleChannelHandler implements
 	//exception
 	private volatile Throwable exception;
 
-	//HashedWheelTimer
+	/**
+	 * 这个Timer是干么的 并不知道啊...
+	 */
 	private volatile Timer timer;
 
 	private boolean connected;
 
 	private SnRpcConfig snRpcConfig = SnRpcConfig.getInstance();
 
+	/**
+	 *connection重要的构造方法
+	 * 根据host和port创建相应的...
+	 */
 	public SnNettyRpcConnection(String host, int port) {
 		snRpcConfig.loadProperties("snrpcserver.properties");
 		this.inetAddr = new InetSocketAddress(host, port);
 		this.timer = new HashedWheelTimer();
 	}
 
+	/**
+	 * 十分十分关键一个方法
+	 *
+	 */
 	public SnRpcResponse sendRequest(SnRpcRequest request) throws Throwable {
+		/**
+		 * 如果没有处于连接状态就抛出异常
+		 */
 		if (!isConnected()) {
 			throw new IllegalStateException("not connected");
 		}
+		/**
+		 * 发出请求
+		 */
 		ChannelFuture writeFuture = channel.write(request);
+		/**
+		 * 如果什么什么的失败了....就抛出异常
+		 */
 		if (!writeFuture.awaitUninterruptibly().isSuccess()) {
 			close();
 			throw writeFuture.getCause();
 		}
+		/**没有出错的话就...等待响应*/
 		waitForResponse();
 
 		Throwable ex = exception;
 		SnRpcResponse resp = this.response;
 		this.response = null;
 		this.exception = null;
-
+		/**如果存在异常那么就跑出异常*/
 		if (null != ex) {
 			close();
 			throw ex;
 		}
+		/**返回response*/
 		return resp;
 	}
 
+	/**
+	 * 进行连接
+	 */
 	public void connection() throws Throwable {
+		/**如果已经连接了那么返回*/
 		if (connected) {
 			return;
 		}
+		/**
+		 * 好复杂的感觉....
+		 */
 		ChannelFactory factory = new NioClientSocketChannelFactory(
 				Executors.newCachedThreadPool(),
 				Executors.newCachedThreadPool());
@@ -97,7 +125,8 @@ public class SnNettyRpcConnection extends SimpleChannelHandler implements
 				.getProperty("snrpc.tcp.nodelay", "true")));
 		bootstrap.setOption("reuseAddress", Boolean.parseBoolean(snRpcConfig
 				.getProperty("snrpc.tcp.reuseAddress", "true")));
-		bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+
+		bootstrap.setPipelineFactory(new ChannelPipelineFactory() {     //设置pipeline的一些属性balabala的呗
 			public ChannelPipeline getPipeline() {
 				ChannelPipeline pipeline = Channels.pipeline();
 				int readTimeout = snRpcConfig.getReadTimeout();
@@ -125,6 +154,11 @@ public class SnNettyRpcConnection extends SimpleChannelHandler implements
 		connected = true;
 	}
 
+	/**
+	 * 覆盖了SimpleChannelHandler的 messageReceived的一个方法
+	 * 将取得的结果转换为response
+	 */
+	@Override
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
 			throws Exception {
 		response = (SnRpcResponse) e.getMessage();
@@ -133,12 +167,19 @@ public class SnNettyRpcConnection extends SimpleChannelHandler implements
 		}
 	}
 
+	/**
+	 *关闭连接
+	 */
 	public void close() throws Throwable {
 		connected = false;
 		if (null != timer) {
 			timer.stop();
 			timer = null;
 		}
+		/**
+		 * 释放资源
+		 * 关闭channel
+		 */
 		if (null != channel) {
 			channel.close().awaitUninterruptibly();
 			channel.getFactory().releaseExternalResources();
@@ -151,6 +192,10 @@ public class SnNettyRpcConnection extends SimpleChannelHandler implements
 		}
 	}
 
+
+	/**
+	 * 这个waitForResponse是干么的
+	 */
 	public void waitForResponse() {
 		synchronized (channel) {
 			try {
@@ -160,10 +205,16 @@ public class SnNettyRpcConnection extends SimpleChannelHandler implements
 		}
 	}
 
+	/**
+	 *返回是否处于连接状态
+	 */
 	public boolean isConnected() {
 		return connected;
 	}
 
+	/**
+	 *返回是否关闭了
+	 */
 	public boolean isClosed() {
 		return (null == channel) || !channel.isConnected()
 				|| !channel.isReadable() || !channel.isWritable();
