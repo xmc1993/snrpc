@@ -33,10 +33,8 @@ import org.stefan.snrpc.serializer.SnRpcResponseEncoder;
 import org.stefan.snrpc.util.HandlerMapper;
 
 /**
- * 
- * SnNettyRpcServer
- * 
- * @author zhaoliangang 2014-11-13
+ * 实现Server的关键类
+ *
  */
 public class SnNettyRpcServer implements SnRpcServer {
 
@@ -51,21 +49,35 @@ public class SnNettyRpcServer implements SnRpcServer {
 	private Timer timer;
 	private int httpListenPort;
 
+	/**
+	 * 构造器哇
+	 */
 	public SnNettyRpcServer(Object... handlers) {
 		snRpcConfig.loadProperties("snrpcserver.properties");
 		this.handlersMap = HandlerMapper.getHandlerMap(handlers);
 	}
 
+	/**
+	 * 构造器哇
+	 */
 	public SnNettyRpcServer(String fileName, Object... handlers) {
 		snRpcConfig.loadProperties(fileName);
 		this.handlersMap = HandlerMapper.getHandlerMap(handlers);
 	}
 
+	/**
+	 * 初始化Server的信息
+	 */
 	private void initServerInfo() {
+		/**这个是什么鬼*/
 		httpListenPort = snRpcConfig.getHttpPort();
+		/**这个又是干么的...*/
 		new ParseXmlToService().parse();
 	}
 
+	/**
+	 * 就是初试话一些bootstrap的东西 设置handler什么的
+	 */
 	private void initHttpBootstrap() {
 		if (SnRpcConfig.getInstance().getDevMod()) {
 			StatisticsService.reportPerformance();
@@ -109,9 +121,10 @@ public class SnNettyRpcServer implements SnRpcServer {
 			throw new IllegalStateException("port: " + httpListenPort
 					+ " already in use!");
 		}
-
+		/**将channel绑定到相应的端口*/
 		Channel channel = bootstrap.bind(new InetSocketAddress(httpListenPort));
 		channelGroup.add(channel);
+
 		logger.info("snrpc server started");
 
 		waitForShutdownCommand();
@@ -125,11 +138,19 @@ public class SnNettyRpcServer implements SnRpcServer {
 
 	}
 
+	/**
+	 * 服务器的开始方法
+	 */
+	@Override
 	public void start() {
 		initServerInfo();
 		initHttpBootstrap();
 	}
 
+	/**
+	 * 服务器的结束方法
+	 */
+	@Override
 	public void stop() throws Throwable {
 		stopped.set(true);
 		synchronized (stopped) {
@@ -137,6 +158,9 @@ public class SnNettyRpcServer implements SnRpcServer {
 		}
 	}
 
+	/**
+	 * 就是 服务器 启动以后 就开始等待客户端的信息
+	 */
 	private void waitForShutdownCommand() {
 		synchronized (stopped) {
 			while (!stopped.get()) {
@@ -147,6 +171,10 @@ public class SnNettyRpcServer implements SnRpcServer {
 			}
 		}
 	}
+
+	/**
+	 * 这个是干么就不知道了.....
+	 */
 
 	private boolean checkPortConfig(int listenPort) {
 		if (listenPort < 0 || listenPort > 65536) {

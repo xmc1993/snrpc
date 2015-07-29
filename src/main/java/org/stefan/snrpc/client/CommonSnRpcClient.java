@@ -85,7 +85,7 @@ public class CommonSnRpcClient implements SnRpcClient {
 	}
 
 	/**
-	 * 返回connection
+	 * 返回connection   !!!注意这里调用了connection()这个方法 很关键 在返回连接的时候进行connect
 	 */
 	private SnRpcConnection getConnection() throws Throwable {
 		if (null != connection) {

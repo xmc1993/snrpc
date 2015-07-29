@@ -20,9 +20,7 @@ import org.stefan.snrpc.serializer.SnRpcResponse;
 import org.stefan.snrpc.util.ReflectionCache;
 
 /**
- * SnNettyRpcServerHandler
- * 
- * @author zhaoliangang 2014-11-13
+ * 和客户端不同 服务器里面会有一个Handler
  */
 public class SnNettyRpcServerHandler extends SimpleChannelUpstreamHandler {
 
@@ -76,6 +74,11 @@ public class SnNettyRpcServerHandler extends SimpleChannelUpstreamHandler {
 		e.getChannel().close().awaitUninterruptibly();
 	}
 
+	/**
+	 * 这个方法很重要！！！
+	 * 当收到客户端的request
+	 * 返回一个response
+	 */
 	@Override
 	public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
 			throws Exception {
