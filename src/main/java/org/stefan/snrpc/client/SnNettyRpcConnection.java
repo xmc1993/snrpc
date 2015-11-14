@@ -119,6 +119,7 @@ public class SnNettyRpcConnection extends SimpleChannelHandler implements
 		ChannelFactory factory = new NioClientSocketChannelFactory(
 				Executors.newCachedThreadPool(),
 				Executors.newCachedThreadPool());
+
 		ClientBootstrap bootstrap = new ClientBootstrap(factory);
 
 		bootstrap.setOption("tcpNoDelay", Boolean.parseBoolean(snRpcConfig
@@ -146,10 +147,12 @@ public class SnNettyRpcConnection extends SimpleChannelHandler implements
 		});
 
 		ChannelFuture channelFuture = bootstrap.connect(inetAddr);
+
 		if (!channelFuture.awaitUninterruptibly().isSuccess()) {
 			bootstrap.releaseExternalResources();
 			throw channelFuture.getCause();
 		}
+
 		channel = channelFuture.getChannel();
 		connected = true;
 	}
